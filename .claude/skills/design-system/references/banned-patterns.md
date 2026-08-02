@@ -1,0 +1,6 @@
+# Banned Patterns
+
+- **No accent bar / indicator stripe on cards** — never use `border-l-*` or `border-t-*` with color coding on Card components. Use alternative differentiation: background tint, badge color, or icon color.
+- **No arbitrary font sizes** — never use `text-[11px]`, `text-[10px]`, `text-[9px]`, or any bracket notation for font size. Use only Tailwind's built-in scale: `text-xs` (12px), `text-sm` (14px), `text-base` (16px), `text-lg` (18px), etc. No exceptions.
+- **No opacity modifiers on text colors** — never use `text-foreground/40`, `text-emerald-400/60`, etc. Use Tailwind's built-in color scale instead (`text-muted-foreground`, `text-zinc-500`, `text-emerald-600`). Opacity modifiers on text make content unreadable on dark backgrounds. Exception: only use opacity modifiers when no existing color variant achieves the intended design (e.g., `bg-emerald-500/10` for subtle tinted backgrounds is acceptable).
+- **Collapse/expand chevron placement** — always place the chevron (`ChevronRight`, rotating 90° on open) to the LEFT of the title/trigger text. Expanded content renders as a seamless extension of the parent container (same bg, thin `border-t` divider, indented past the chevron). Never use a separate "Show/Hide" text toggle — the title row IS the trigger.

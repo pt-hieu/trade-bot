@@ -1,0 +1,13 @@
+-- Migration 039: repair recommendation rows damaged by the ticker dedup rule.
+--
+-- One-time data correction. Body omitted from the public repository because its
+-- literals described a real position.
+--
+-- What it did: migration 038 added a rule that removes duplicate tickers from a
+-- day's recommendations. Applied retroactively it deleted one row that had
+-- already been acted on, and left two others duplicated across the wrong
+-- sections. This migration re-inserted the deleted recommendation with its
+-- original entry, stop, target, and size, set a NULL evaluation section, and
+-- removed the two genuine duplicates.
+--
+-- This file is a no-op and exists to keep migration numbering contiguous.

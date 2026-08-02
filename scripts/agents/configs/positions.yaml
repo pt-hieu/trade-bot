@@ -1,0 +1,12 @@
+agent_key: positions
+agent_name: Position Monitor Agent
+description: Monitors swing positions for exit/trim signals
+model_id: z-ai/glm-5.1
+temperature: 0.2
+max_tokens: 96000
+top_p: null
+output_retries: 2
+model_settings: {}
+system_prompt: (inactive - replaced by positions_ensemble)
+
+allowed_tools: []  # SWI-180 — inject-first agent; unlock_tool covers exception cases

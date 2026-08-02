@@ -1,0 +1,4 @@
+# Copy to backend.hcl and fill in, then: terraform init -backend-config=backend.hcl
+bucket  = "your-terraform-state-bucket"
+region  = "ap-southeast-1"
+profile = "your-aws-profile"

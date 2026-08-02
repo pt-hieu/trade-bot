@@ -1,0 +1,5 @@
+-- Migration 123: Add moat assessment instructions to longterm_review prompt
+UPDATE agent_prompts
+SET system_prompt = system_prompt || E'\n\n## Moat Assessment (MANDATORY per stock)\nFor each stock, provide a structured moat_assessment with:\n1. Rate each dimension: STRONG / MODERATE / WEAK / NONE\n   - network_effects: strength of user/supplier flywheel\n   - switching_costs: technical integration depth, contractual lock-in\n   - scale_economies: unit cost advantages at volume\n   - intangible_assets: brand value, licenses, proprietary data\n2. Vietnam factors (True/False):\n   - fol_premium: stock trades at premium due to near-FOL foreign ownership\n   - state_ownership: SCIC or government stake provides structural advantages\n   - regulatory_license: holds hard-to-get license (banking, insurance, telecom)\n3. moat_evidence: 1-2 sentences citing the STRONGEST dimension with specific evidence\n\nBULL/BEAR balance: For each STRONG rating, name what could erode it.\nFor any dimension not applicable, use NONE (never leave blank).'
+WHERE agent_key = 'longterm_review'
+AND system_prompt NOT LIKE '%Moat Assessment (MANDATORY%';

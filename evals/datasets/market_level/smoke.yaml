@@ -1,0 +1,137 @@
+cases:
+  - name: clear_risk_on
+    inputs:
+      vnindex_technicals:
+        close: 1285.0
+        rsi: 58.3
+        ma20: 1260.0
+        ma50: 1240.0
+        price_vs_ma20: above
+        price_vs_ma50: above
+        levels:
+          swing_high: 1295.0
+          swing_low: 1245.0
+          nearest_support: 1260.0
+          nearest_resistance: 1295.0
+      sector_rotation:
+        hot: [banking, technology]
+        cold: [state_owned]
+        signal: Risk-on rotation into growth sectors
+      regime_history:
+        - {date: "2026-02-10", regime: RISK_ON, confidence: 0.7}
+        - {date: "2026-02-07", regime: NEUTRAL, confidence: 0.5}
+    metadata:
+      regime: RISK_ON
+      min_confidence: 0.5
+      difficulty: easy
+      type: positive
+
+  - name: clear_risk_off
+    inputs:
+      vnindex_technicals:
+        close: 1175.0
+        rsi: 28.5
+        ma20: 1210.0
+        ma50: 1235.0
+        price_vs_ma20: below
+        price_vs_ma50: below
+        levels:
+          swing_high: 1230.0
+          swing_low: 1170.0
+          nearest_support: 1150.0
+          nearest_resistance: 1210.0
+      sector_rotation:
+        hot: [state_owned, energy]
+        cold: [banking, real_estate, technology]
+        signal: Defensive rotation, risk-off
+      regime_history:
+        - {date: "2026-02-10", regime: RISK_OFF, confidence: 0.8}
+        - {date: "2026-02-07", regime: RISK_OFF, confidence: 0.7}
+    metadata:
+      regime: RISK_OFF
+      min_confidence: 0.6
+      difficulty: easy
+      type: positive
+
+  - name: clear_neutral_mixed_signals
+    inputs:
+      vnindex_technicals:
+        close: 1230.0
+        rsi: 48.0
+        ma20: 1228.0
+        ma50: 1235.0
+        price_vs_ma20: above
+        price_vs_ma50: below
+        levels:
+          swing_high: 1260.0
+          swing_low: 1210.0
+          nearest_support: 1220.0
+          nearest_resistance: 1240.0
+      sector_rotation:
+        hot: []
+        cold: []
+        signal: No clear rotation
+      regime_history:
+        - {date: "2026-02-10", regime: NEUTRAL, confidence: 0.5}
+        - {date: "2026-02-07", regime: RISK_ON, confidence: 0.5}
+    metadata:
+      regime: NEUTRAL
+      min_confidence: 0.3
+      difficulty: easy
+      type: positive
+
+  - name: overbought_reversal_risk
+    inputs:
+      vnindex_technicals:
+        close: 1310.0
+        rsi: 73.0
+        ma20: 1280.0
+        ma50: 1260.0
+        price_vs_ma20: above
+        price_vs_ma50: above
+        levels:
+          swing_high: 1315.0
+          swing_low: 1270.0
+          nearest_support: 1280.0
+          nearest_resistance: 1320.0
+      sector_rotation:
+        hot: [banking, technology]
+        cold: []
+        signal: Broad buying but momentum extended
+      regime_history:
+        - {date: "2026-02-10", regime: RISK_ON, confidence: 0.8}
+        - {date: "2026-02-07", regime: RISK_ON, confidence: 0.7}
+    metadata:
+      regime: RISK_OFF
+      min_confidence: 0.4
+      difficulty: medium
+      type: edge
+      note: RSI 73 overbought — should flag reversal risk
+
+  - name: noise_not_risk_off
+    inputs:
+      vnindex_technicals:
+        close: 1242.0
+        rsi: 42.0
+        ma20: 1248.0
+        ma50: 1240.0
+        price_vs_ma20: below
+        price_vs_ma50: above
+        levels:
+          swing_high: 1260.0
+          swing_low: 1230.0
+          nearest_support: 1235.0
+          nearest_resistance: 1248.0
+      sector_rotation:
+        hot: [consumer]
+        cold: [infrastructure]
+        signal: Mild rotation
+      regime_history:
+        - {date: "2026-02-10", regime: NEUTRAL, confidence: 0.5}
+        - {date: "2026-02-07", regime: NEUTRAL, confidence: 0.6}
+    metadata:
+      regime: NEUTRAL
+      min_confidence: 0.3
+      difficulty: medium
+      type: negative
+      note: Slight weakness but not RISK_OFF — should not overreact

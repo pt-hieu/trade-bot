@@ -1,0 +1,90 @@
+[project]
+name = "trade-bot"
+version = "0.1.0"
+description = "Swing trading analysis for Vietnamese stocks"
+# Upper bound is real: 3.14's deferred annotations (PEP 649) change when
+# undefined annotation names raise, which the orchestrator import guards rely on.
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "vnstock>=3.3.1",
+    "httpx>=0.28.1",
+    "pandas",
+    "requests",
+    "pydantic-ai",
+    "logfire",
+    "asyncpg>=0.31.0",
+    "python-dotenv>=1.2.2",
+    "sentence-transformers>=2.2.0",
+    "yfinance>=1.2.1",
+    "pyyaml>=6.0.3",
+]
+
+[dependency-groups]
+dev = [{include-group = "lint"}, {include-group = "test"}]
+lint = ["ruff", "pre-commit", "pyright"]
+test = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=0.23",
+    "pytest-mock>=3.15.1",
+    "pytest-cov>=4.1",
+    "pydantic-evals[logfire]",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501", "E402"]
+unfixable = ["F401"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "PLR2004", "ANN"]
+"evals/**/*.py" = ["S101", "PLR2004", "ANN"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+pythonPlatform = "Linux"
+include = ["scripts"]
+exclude = ["scripts/db/migrations", "**/__pycache__"]
+typeCheckingMode = "basic"
+extraPaths = ["scripts"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "evals"]
+pythonpath = ["scripts"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = ["-v", "--tb=short", "-x"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: tests requiring mocked external services",
+    "agent: async agent tests",
+    "eval: LLM evaluation tests (require OPENROUTER_API_KEY)",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:pydantic.*:",
+]
+
+[tool.coverage.run]
+source = ["scripts"]
+omit = [
+    "scripts/__init__.py",
+    "scripts/get_*.py",
+    "scripts/*_notify.py",
+]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]

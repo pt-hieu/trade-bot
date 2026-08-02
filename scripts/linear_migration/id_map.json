@@ -1,0 +1,4 @@
+{
+  "_comment": "Legacy-id -> Linear-id map, produced by the one-shot migration. Empty in the public repo; regenerate against your own Linear workspace.",
+  "legacy_to_linear": {}
+}

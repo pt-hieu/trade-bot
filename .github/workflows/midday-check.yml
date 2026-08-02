@@ -1,0 +1,119 @@
+name: Midday Market Check
+
+on:
+  schedule:
+    # Run at 5:00 UTC = 12:00 PM Vietnam time (GMT+7)
+    # Market break: 11:30 AM - 1:00 PM Vietnam
+    # This runs during lunch break to review morning session
+    # Only on weekdays (Mon-Fri)
+    - cron: '0 5 * * 1-5'
+  workflow_dispatch:
+    # Allow manual trigger from GitHub Actions UI
+
+# SWI-261: bucket scheduled runs by start timestamp; manual dispatches share
+# a single bucket. Acquire-marker + retry job below catch
+# runner-acquisition failures (the job-never-started case).
+concurrency:
+  group: midday-check-${{ github.event.schedule != '' && format('sched-{0}', github.run_started_at) || 'manual' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  midday:
+    # Scheduled runs stay off in forks: they need secrets a fork will not have.
+    if: github.event_name != 'schedule' || github.repository == 'OWNER/trade-bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    outputs:
+      acquired: ${{ steps.acquire_marker.outputs.acquired }}
+    env:
+      # Hoisted to workflow-level so both midday_check.py (for
+      # send_telegram_error in the 0-rec skip path) and midday_notify.py
+      # inherit them. MON-2026-04-16-001 was partly caused by these
+      # being only on the notify step, leaving the check step unable
+      # to alert on skip.
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+    steps:
+      - id: acquire_marker
+        name: Mark runner as acquired
+        run: echo "acquired=true" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Check market status
+        id: market_check
+        working-directory: scripts
+        run: |
+          if uv run python -m shared.market_calendar; then
+            echo "trading=true" >> $GITHUB_OUTPUT
+          else
+            echo "trading=false" >> $GITHUB_OUTPUT
+            echo "Market holiday — skipping midday check"
+          fi
+
+      - name: Run midday check
+        # Two-tier retry: step-level for transient LLM failures, workflow-level
+        # for runner-acquisition failures.
+        if: steps.market_check.outputs.trading == 'true' || github.event_name == 'workflow_dispatch'
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          LOGFIRE_TOKEN: ${{ secrets.LOGFIRE_TOKEN }}
+          LOGFIRE_ENVIRONMENT: production
+          VNSTOCK_API_KEY: ${{ secrets.VNSTOCK_API_KEY }}
+          VNSTOCK_API_URL: ${{ secrets.VNSTOCK_API_URL }}
+          SWINGY_TOOL_STRICT: "1"
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 3
+          timeout_minutes: 60
+          retry_wait_seconds: 300
+          shell: bash
+          command: uv run python scripts/midday_check.py
+
+      - name: Send Telegram notification
+        if: steps.market_check.outputs.trading == 'true' || github.event_name == 'workflow_dispatch'
+        run: uv run python scripts/midday_notify.py
+
+  retry-on-runner-unavailable:
+    # SWI-261: re-dispatches when the primary job's runner was never
+    # acquired. Single re-dispatch per 15-minute failure window.
+    needs: midday
+    if: (failure() || cancelled()) && needs.midday.outputs.acquired != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - id: recent_redispatches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          count=$(gh run list \
+            --workflow=midday-check.yml \
+            --created='-15 minutes' \
+            --event=workflow_dispatch \
+            --json status,conclusion \
+            --jq '[.[] | select(.conclusion != "success")] | length')
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+      - name: Re-dispatch on runner-unavailable
+        if: fromJSON(steps.recent_redispatches.outputs.count) < 1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run midday-check.yml --ref ${{ github.ref_name }}

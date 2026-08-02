@@ -1,0 +1,78 @@
+# BUY-candidate score configuration (SWI-171, Phase A).
+#
+# Validation contract — `validate_scoring_config()` enforces:
+#   * weights MUST sum to 1.0 ± 1e-9
+#   * exactly the 13 keys listed (no missing, no extras)
+#   * each weight ∈ [0, 1]
+#   * threshold ∈ [0, 100]
+#   * regime_penalty has exactly {CALM, CAUTIOUS, ELEVATED, RISK_OFF}
+#     (CRISIS hard-blocks in the composer — never reaches scoring)
+#   * scoring_version is valid SemVer
+#
+# Why this lives in YAML, NOT in `trading_config` (Neon table)
+# ──────────────────────────────────────────────────────────────
+# `trading_config` is Swingy's canonical pattern for tunable trading
+# constants. Scoring weights deliberately do NOT use that pattern because:
+#   1. Every `pre_gate_candidates` audit row snapshots `weights_jsonb` for
+#      historical replay determinism. A DB hot-swap would let weights drift
+#      mid-window without the snapshot bumping — replay would be lying.
+#   2. Git-versioned weight changes are PR-reviewable + auditable.
+#   3. `scoring_version` SemVer is bumped on every weight or normalize()
+#      math change → audit rows pin the exact rule set used to score them.
+#
+# DO NOT migrate weights to trading_config without first preserving replay
+# determinism via mandatory `scoring_version` bump on every weight change.
+
+scoring_version: "2.2.0"
+
+threshold: 60
+
+# Σw = 1.00 exactly:
+#   0.20 + 0.10 + 0.05 + 0.10 + 0.05 + 0.10 + 0.14 + 0.07
+# + 0.05 + 0.05 + 0.05 + 0.04 = 1.00
+#
+# Initial weights are deliberately conservative on the 3 overlapping
+# conviction signals (strategy_confidence + belief_conviction + sim_ev =
+# 0.25). Phase B re-fits with regime-stratified holdout split + Spearman
+# > 0.7 orthogonalisation step before promoting any weight change.
+weights:
+  risk_reward: 0.20
+  sim_p_target: 0.10
+  sim_p_stop: 0.05
+  sim_ev: 0.10
+  strategy_confidence: 0.05
+  belief_conviction: 0.10
+  catalyst_strength: 0.14   # SWI-305: 0.04 reclaimed from order_imbalance (v2.1.0).
+                            # Preliminary — pending Phase B Spearman fit per
+                            # scoring.yaml lines 34-37 rule.
+  bullish_sector_belief_count: 0.07
+  rs_20d: 0.05
+  volume_vs_avg: 0.05
+  trend_alignment: 0.05
+  foreign_net_strength: 0.04
+
+# Regime penalty — subtractive points off `base_score`. CRISIS does NOT
+# appear here: composer Rule 2 hard-blocks all entries in CRISIS, so the
+# scorer never sees a CRISIS candidate. Effective score floor on RISK_OFF
+# is `100 - 15 = 85` against the threshold of 60 — see plan "Risks
+# acknowledged §1" for the locked user decision and Phase A audit
+# verification path.
+regime_penalty:
+  CALM: 0
+  CAUTIOUS: 3
+  ELEVATED: 7
+  RISK_OFF: 15
+
+# Sim-dependent features — these contributions are zeroed and their
+# weight is redistributed across the non-sim features when an audit row
+# is scored before `simulate_trade` has run (L1/L2 drops). Validated at
+# pipeline startup: must be non-empty and a subset of `weights` keys.
+sim_dependent_features:
+  - sim_p_target
+  - sim_p_stop
+  - sim_ev
+
+# Shock penalty — applied alongside regime_penalty when an active
+# geopolitical shock pins the regime. Suppressed (set to 0) when
+# `regime_relief_eligible` fires (mirrors composer Rule 5a).
+shock_penalty: 5

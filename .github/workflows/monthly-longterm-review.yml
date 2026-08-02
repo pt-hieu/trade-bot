@@ -1,0 +1,45 @@
+name: Monthly Long-Term Review
+
+on:
+  schedule:
+    # Run at 1:00 UTC on 1st of each month = 8:00 AM Vietnam time
+    - cron: '0 1 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  longterm-review:
+    # Scheduled runs stay off in forks: they need secrets a fork will not have.
+    if: github.event_name != 'schedule' || github.repository == 'OWNER/trade-bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run longterm review
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          VNSTOCK_API_URL: ${{ secrets.VNSTOCK_API_URL }}
+          VNSTOCK_API_KEY: ${{ secrets.VNSTOCK_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          LOGFIRE_TOKEN: ${{ secrets.LOGFIRE_TOKEN }}
+          LOGFIRE_ENVIRONMENT: production
+          SWINGY_ENV: production
+        run: uv run python scripts/longterm_review.py

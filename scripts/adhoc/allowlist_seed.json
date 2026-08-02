@@ -1,0 +1,66 @@
+{
+  "_meta": {
+    "ticket": "SWI-180",
+    "generated_at": "2026-05-04",
+    "source": "logfire span_name=broker_tool, last 30d, success-only, n>=3",
+    "exclusions": ["news_examiner", "article_sentiment", "narrative_labeler"],
+    "exclusion_reason": "obsoleted by news-v2 commit 1f4d6991 (SWI-241..247)",
+    "yaml_total_on_disk": 39,
+    "yaml_to_migrate": 36,
+    "logfire_query_window_days": 30,
+    "agents_with_meaningful_broker_use": ["sector_enrichment", "sector_news"]
+  },
+  "allowlists": {
+    "sector_enrichment": [
+      "enrichment.get_block_trades",
+      "fundamental.get_valuation_history",
+      "enrichment.get_flow",
+      "enrichment.get_insider"
+    ],
+    "sector_news": [
+      "article.read",
+      "article.search",
+      "narrative.get_active",
+      "portfolio.get_learnings"
+    ],
+    "alert_analyst": [],
+    "bear_reviewer": [],
+    "bull_reviewer": [],
+    "capital_events": [],
+    "catalysts": [],
+    "critic": [],
+    "entry_strategist": [],
+    "longterm": [],
+    "longterm_review": [],
+    "macro_interpreter": [],
+    "market_level": [],
+    "midday": [],
+    "news_extractor": [],
+    "news_relevance": [],
+    "position_strategist": [],
+    "positions": [],
+    "positions_aggregator": [],
+    "positions_pev_alert": [],
+    "positions_pev_verifier": [],
+    "positions_technical": [],
+    "positions_thesis": [],
+    "positions_value": [],
+    "retro_commentary": [],
+    "retro_eval_critic": [],
+    "retro_generator": [],
+    "sector_aggregator": [],
+    "sector_rotation": [],
+    "sector_technical": [],
+    "synthesis_holdings": [],
+    "synthesis_picks": [],
+    "trading_mode": [],
+    "watchlist_coordinator": [],
+    "watchlist_sector_evaluator": []
+  },
+  "manual_review_notes": [
+    "30d hot-set is sparse: only sector_enrichment and sector_news exercise broker tools to success n>=3.",
+    "All other agents either inject-only or have <3 successful broker calls/30d -> default empty allowlist + unlock_tool fallback.",
+    "Manual additions deferred: review by injected_fields per YAML before Commit A. positions_thesis/positions_value historical broker use is 100% failure (10/10 each on portfolio.get_longterm_config/get_thesis/fundamental.get_full_analysis) -> NOT seeded; if these agents legitimately need the data, fix via injection or unlock_tool, not allowlist.",
+    "100%-fail tools per Stage 3.5 audit (in scope, not deferred): portfolio.get_longterm_config, portfolio.get_thesis, fundamental.get_full_analysis."
+  ]
+}

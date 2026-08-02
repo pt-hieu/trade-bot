@@ -1,0 +1,64 @@
+name: Weekly Watchlist Update
+
+on:
+  schedule:
+    # Run at 1:00 UTC Saturday = 8:00 AM Vietnam time (GMT+7)
+    - cron: '0 1 * * 6'
+  workflow_dispatch:
+    # Allow manual trigger from GitHub Actions UI
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    # Scheduled runs stay off in forks: they need secrets a fork will not have.
+    if: github.event_name != 'schedule' || github.repository == 'OWNER/trade-bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Check if next week has trading days
+        id: market_check
+        working-directory: scripts
+        run: |
+          if uv run python -m shared.market_calendar --next-week; then
+            echo "trading_week=true" >> $GITHUB_OUTPUT
+          else
+            echo "trading_week=false" >> $GITHUB_OUTPUT
+            echo "No trading days next week — skipping watchlist update"
+          fi
+
+      - name: Run weekly watchlist update
+        if: steps.market_check.outputs.trading_week == 'true' || github.event_name == 'workflow_dispatch'
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          LOGFIRE_TOKEN: ${{ secrets.LOGFIRE_TOKEN }}
+          LOGFIRE_ENVIRONMENT: production
+          VNSTOCK_API_KEY: ${{ secrets.VNSTOCK_API_KEY }}
+          VNSTOCK_API_URL: ${{ secrets.VNSTOCK_API_URL }}
+        run: PYTHONUNBUFFERED=1 uv run python scripts/weekly_watchlist_update.py
+
+      - name: Send Telegram notification
+        if: steps.market_check.outputs.trading_week == 'true' || github.event_name == 'workflow_dispatch'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: uv run python scripts/weekly_notify.py

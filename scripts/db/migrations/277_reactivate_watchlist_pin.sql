@@ -1,0 +1,6 @@
+-- Migration 277: Reactivate and pin a swing-watchlist ticker
+-- The ticker had been auto-removed for weak technicals, then hit its ceiling on two
+-- consecutive sessions. Pinning stops the weekly watchlist agent removing it again.
+--
+-- Body redacted for the public repo: it named a live watchlist position.
+-- Shape: UPDATE swing_watchlist SET is_active, is_pinned, pin_reason WHERE ticker = ?

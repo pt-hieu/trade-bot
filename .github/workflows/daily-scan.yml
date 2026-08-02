@@ -1,0 +1,217 @@
+name: Daily Market Scan
+
+on:
+  schedule:
+    # Run at 22:00 UTC = 5:00 AM Vietnam time (GMT+7)
+    # Every day — news pipeline runs daily including weekends
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force re-run even if already ran today'
+        required: false
+        type: boolean
+        default: false
+
+# SWI-261: bucket scheduled runs by start timestamp; manual dispatches share
+# a single bucket. Acquire-marker step + retry job below match the
+# parity pattern across all four pipeline workflows.
+concurrency:
+  group: daily-scan-${{ github.event.schedule != '' && format('sched-{0}', github.run_started_at) || 'manual' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  scan:
+    # Scheduled runs stay off in forks: they need secrets a fork will not have.
+    if: github.event_name != 'schedule' || github.repository == 'OWNER/trade-bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    outputs:
+      acquired: ${{ steps.acquire_marker.outputs.acquired }}
+
+    steps:
+      - id: acquire_marker
+        name: Mark runner as acquired
+        run: echo "acquired=true" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Check market status
+        id: market_check
+        working-directory: scripts
+        run: |
+          if uv run python -m shared.market_calendar; then
+            echo "trading=true" >> $GITHUB_OUTPUT
+          else
+            echo "trading=false" >> $GITHUB_OUTPUT
+            echo "Market holiday — news pipeline only"
+          fi
+
+      - name: Check if already ran today
+        id: dedup_check
+        if: github.event.inputs.force != 'true'
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          RESULT=$(uv run python scripts/daily_scan.py --check)
+          echo "already_ran=$RESULT" >> $GITHUB_OUTPUT
+          if [ "$RESULT" = "true" ]; then
+            echo "Pipeline already ran — skipping"
+          fi
+
+      - name: Detect sector rotation
+        if: |
+          steps.market_check.outputs.trading == 'true'
+          && (steps.dedup_check.outputs.already_ran != 'true' || github.event.inputs.force == 'true')
+        continue-on-error: true
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          VNSTOCK_API_URL: ${{ secrets.VNSTOCK_API_URL }}
+          VNSTOCK_API_KEY: ${{ secrets.VNSTOCK_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: uv run python scripts/sector_rotation.py
+
+      - name: Run daily scan
+        if: |
+          steps.market_check.outputs.trading == 'true'
+          && (steps.dedup_check.outputs.already_ran != 'true' || github.event.inputs.force == 'true')
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VNSTOCK_API_KEY: ${{ secrets.VNSTOCK_API_KEY }}
+          VNSTOCK_API_URL: ${{ secrets.VNSTOCK_API_URL }}
+          FORCE_RUN: ${{ github.event.inputs.force == 'true' && 'true' || '' }}
+        run: uv run python scripts/daily_scan.py
+
+      - name: Run news pipeline
+        if: |
+          steps.dedup_check.outputs.already_ran != 'true'
+          || github.event.inputs.force == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          LOGFIRE_TOKEN: ${{ secrets.LOGFIRE_TOKEN }}
+          LOGFIRE_ENVIRONMENT: production
+          VNSTOCK_API_URL: ${{ secrets.VNSTOCK_API_URL }}
+          VNSTOCK_API_KEY: ${{ secrets.VNSTOCK_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: uv run python scripts/news_pipeline_v2.py
+
+      - name: Pre-flight orchestrator import smoke check
+        if: |
+          steps.market_check.outputs.trading == 'true'
+          && (steps.dedup_check.outputs.already_ran != 'true' || github.event.inputs.force == 'true')
+        run: uv run python scripts/hooks/check_orchestrator_imports.py
+
+      - name: Run LLM analysis
+        if: |
+          steps.market_check.outputs.trading == 'true'
+          && (steps.dedup_check.outputs.already_ran != 'true' || github.event.inputs.force == 'true')
+        # SWI-306 (2026-05-11): max_attempts pinned to 1. Observed failures
+        # (e.g. SECTOR_TICKER_COVERAGE_GAP) are deterministic — silent
+        # provider hangs cascade into missing-ticker fatals that re-running
+        # cannot fix, only burn 50min + 10min wait per attempt. Fix the
+        # underlying provider/agent issue instead of looping.
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          LOGFIRE_TOKEN: ${{ secrets.LOGFIRE_TOKEN }}
+          LOGFIRE_ENVIRONMENT: production
+          VNSTOCK_API_URL: ${{ secrets.VNSTOCK_API_URL }}
+          VNSTOCK_API_KEY: ${{ secrets.VNSTOCK_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SWINGY_TOOL_STRICT: "1"
+          ADVOCATE_GATE_MODE: enforce
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 1
+          timeout_minutes: 50
+          retry_wait_seconds: 600
+          shell: bash
+          command: uv run python scripts/llm_analysis.py
+
+      - name: Mark holiday scan complete
+        if: |
+          steps.market_check.outputs.trading == 'false'
+          && steps.dedup_check.outputs.already_ran != 'true'
+          && github.event.inputs.force != 'true'
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: uv run python scripts/daily_scan.py --mark-holiday
+
+      - name: Run holiday analysis (macro + geo + commodities)
+        if: |
+          steps.market_check.outputs.trading == 'false'
+          && steps.dedup_check.outputs.already_ran != 'true'
+          && github.event_name != 'workflow_dispatch'
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          LOGFIRE_TOKEN: ${{ secrets.LOGFIRE_TOKEN }}
+          LOGFIRE_ENVIRONMENT: production
+          VNSTOCK_API_URL: ${{ secrets.VNSTOCK_API_URL }}
+          VNSTOCK_API_KEY: ${{ secrets.VNSTOCK_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: uv run python scripts/news_digest.py
+
+      - name: Send Telegram notification
+        # SWI-306 (2026-05-06): always-fire so a news-pipeline failure can't
+        # silence the LLM-analysis summary the operator relies on. Same
+        # force-tolerant guard as the rest of the workflow.
+        if: |
+          always()
+          && steps.market_check.outputs.trading == 'true'
+          && (steps.dedup_check.outputs.already_ran != 'true' || github.event.inputs.force == 'true')
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: uv run python scripts/telegram_notify.py
+
+  retry-on-runner-unavailable:
+    # SWI-261: re-dispatches when the primary job's runner was never
+    # acquired. Single re-dispatch per 15-minute failure window.
+    needs: scan
+    if: (failure() || cancelled()) && needs.scan.outputs.acquired != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - id: recent_redispatches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          count=$(gh run list \
+            --workflow=daily-scan.yml \
+            --created='-15 minutes' \
+            --event=workflow_dispatch \
+            --json status,conclusion \
+            --jq '[.[] | select(.conclusion != "success")] | length')
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+      - name: Re-dispatch on runner-unavailable
+        if: fromJSON(steps.recent_redispatches.outputs.count) < 1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run daily-scan.yml --ref ${{ github.ref_name }}

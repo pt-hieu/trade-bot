@@ -1,0 +1,22 @@
+-- Migration 318: merge a dual-listed holding's SWING slice into its LONGTERM slice.
+--
+-- One-time data correction. Body omitted from the public repository because its
+-- literals described a real position.
+--
+-- What it did: one ticker was held in two rows with different plan_types, having
+-- been accumulated first as a swing trade and then on a long-term thesis. The
+-- migration collapsed them into a single LONGTERM row at the share-weighted
+-- average of the two cost bases, deleted the SWING row, and asserted afterwards
+-- that no ticker remained dual-listed.
+--
+-- Why it mattered: dual listing was a special case in the renderers and the
+-- alert paths, and a helper that collapsed holdings by ticker silently dropped
+-- one of the two slices. Removing the only dual-listed ticker let that special
+-- case go away.
+--
+-- The historical audit trail — trades, evaluations, recommendations — kept the
+-- old plan_type. Merging live holdings does not revise past decisions.
+--
+-- It guarded itself with assertions on the exact share counts and cost bases of
+-- the production rows, so it was never replayable elsewhere. This file is a
+-- no-op and exists to keep migration numbering contiguous.

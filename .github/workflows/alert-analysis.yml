@@ -1,0 +1,41 @@
+name: Alert Analysis
+
+on:
+  repository_dispatch:
+    types: [alert_triggered]
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run alert analysis
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VNSTOCK_API_URL: ${{ secrets.VNSTOCK_API_URL }}
+          VNSTOCK_API_KEY: ${{ secrets.VNSTOCK_API_KEY }}
+          ALERT_ID: ${{ github.event.client_payload.alert_id }}
+          ALERT_TICKER: ${{ github.event.client_payload.ticker }}
+          ALERT_ACTION: ${{ github.event.client_payload.recommended_action }}
+        run: uv run python scripts/run_alert_analysis.py

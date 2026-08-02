@@ -1,0 +1,3 @@
+# Regression cases — populated from retrospective failures via seed_from_retro.py
+# Each case represents a past failure mode that should be caught.
+cases: []

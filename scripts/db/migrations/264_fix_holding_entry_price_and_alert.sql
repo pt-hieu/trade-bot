@@ -1,0 +1,16 @@
+-- Migration 264: correct an ADD recommendation built from average cost.
+--
+-- One-time data correction. Body omitted from the public repository because its
+-- literals described a real position.
+--
+-- What it did: a pipeline review found that ADD recommendations on an existing
+-- holding used the position's average cost as the entry price instead of the
+-- current market price. Risk-reward was therefore computed against the wrong
+-- entry, and no alert had been registered. This migration corrected the entry
+-- price, recomputed risk-reward, and registered the missing alert with its
+-- trigger condition.
+--
+-- The behavioural fix lives in the recommendation builder. This migration only
+-- repaired rows already written.
+--
+-- This file is a no-op and exists to keep migration numbering contiguous.

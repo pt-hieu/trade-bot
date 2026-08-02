@@ -1,0 +1,80 @@
+{
+  "_comment": "Label taxonomy for the Linear team backing this repo. UUIDs are blank in the public repo \u2014 create the labels in your own workspace and fill in the ids.",
+  "team": {
+    "name": "Swingy",
+    "id": ""
+  },
+  "groups": {
+    "category": "",
+    "severity": "",
+    "source": "",
+    "area": "",
+    "pipeline": "",
+    "dimension": ""
+  },
+  "category": {
+    "regression-watch": "",
+    "scheduled-work": "",
+    "audit-finding": "",
+    "bug": "",
+    "quality-gap": "",
+    "feature": "",
+    "decision": ""
+  },
+  "severity": {
+    "critical": "",
+    "warning": "",
+    "info": ""
+  },
+  "source": {
+    "pipeline-review": "",
+    "audit": "",
+    "dev-adhoc": "",
+    "incident": "",
+    "external": ""
+  },
+  "area": {
+    "trading": "",
+    "infra": "",
+    "observability": "",
+    "pipeline": "",
+    "cost": "",
+    "web": "",
+    "types": "",
+    "data": "",
+    "agent-prompts": "",
+    "docs": ""
+  },
+  "pipeline": {
+    "morning": "",
+    "midday": "",
+    "retro": "",
+    "catalyst": "",
+    "news": "",
+    "watchlist": "",
+    "alert": "",
+    "pipeline-review": ""
+  },
+  "dimension": {
+    "inputs-and-config": "",
+    "reasoning-and-output": "",
+    "resilience-and-integration": ""
+  },
+  "renames": {
+    "area.pipeline": {
+      "legacy_value": "pipeline",
+      "linear_label_name": "pipeline-system",
+      "reason": "Legacy area enum value 'pipeline' collided with Linear label group 'pipeline'. Import script maps area=pipeline \u2192 Linear label 'pipeline-system' (under parent 'area')."
+    },
+    "pipeline.pipeline-review": {
+      "legacy_value": "pipeline-review",
+      "linear_label_name": "pipeline-review-sweep",
+      "reason": "Legacy pipelines enum value 'pipeline-review' collided with source.pipeline-review. Import script maps pipelines=[pipeline-review] \u2192 Linear label 'pipeline-review-sweep' (under parent 'pipeline')."
+    },
+    "category.bug": {
+      "legacy_value": "bug",
+      "linear_label_name": "Bug",
+      "reason": "Workspace-level 'Bug' label pre-existed and could not be deleted via MCP. Import maps category=bug \u2192 existing 'Bug' label (non-grouped). No current YAML items use category=bug; relevant for future NEW findings."
+    }
+  }
+}

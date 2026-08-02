@@ -1,0 +1,63 @@
+cases:
+  - name: normal_healthy_cash
+    inputs:
+      deployable_cash: 25000000
+      position_alerts: []
+      sector_rotation: {hot: [banking], cold: []}
+      longterm_tickers: [FPT, TCB]
+    metadata:
+      mode: NORMAL
+      difficulty: easy
+      note: 25M deployable → NORMAL (deterministic)
+
+  - name: low_cash_trim_only
+    inputs:
+      deployable_cash: 3000000
+      position_alerts:
+        - {ticker: NLG, action: HOLD, reason: "Near breakeven"}
+      sector_rotation: {hot: [], cold: []}
+      longterm_tickers: [FPT, TCB]
+    metadata:
+      mode: LOW_CASH
+      difficulty: easy
+      note: 3M deployable → LOW_CASH (deterministic)
+
+  - name: zero_cash_reallocation
+    inputs:
+      deployable_cash: 0
+      position_alerts:
+        - {ticker: SHB, action: HOLD, reason: "Stagnant, no momentum"}
+        - {ticker: NLG, action: HOLD, reason: "Near support"}
+      sector_rotation:
+        hot: [banking, technology]
+        cold: [infrastructure]
+      longterm_tickers: [FPT, TCB, NLG]
+      holdings:
+        SHB: {shares: 1000, avg_cost: 12500}
+        NLG: {shares: 1000, avg_cost: 30000}
+    metadata:
+      mode: REALLOCATION
+      difficulty: medium
+      note: 0 cash → REALLOCATION, LLM identifies stagnant positions
+
+  - name: exactly_5m_boundary
+    inputs:
+      deployable_cash: 5000000
+      position_alerts: []
+      sector_rotation: {hot: [], cold: []}
+      longterm_tickers: [FPT]
+    metadata:
+      mode: LOW_CASH
+      difficulty: easy
+      note: Exactly 5M → LOW_CASH (boundary test)
+
+  - name: just_above_5m
+    inputs:
+      deployable_cash: 5000001
+      position_alerts: []
+      sector_rotation: {hot: [banking], cold: []}
+      longterm_tickers: [FPT]
+    metadata:
+      mode: NORMAL
+      difficulty: easy
+      note: 5M+1 → NORMAL (boundary test)

@@ -1,0 +1,10 @@
+-- Migration 030: recompute a stored win-rate statistic.
+--
+-- One-time data correction. Body omitted from the public repository because the
+-- value it wrote was a real track record.
+--
+-- What it did: the summary win rate had been written as zero because the
+-- calculation counted an entry-hit gate rather than the win field. This wrote
+-- the correct figure, recomputed from the underlying evaluation rows.
+--
+-- This file is a no-op and exists to keep migration numbering contiguous.

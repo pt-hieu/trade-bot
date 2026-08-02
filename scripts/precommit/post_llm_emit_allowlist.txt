@@ -1,0 +1,20 @@
+# Post-LLM emit allowlist (SWI-206 Layer B).
+# Format: <file_path>:<ClassName>.<method_name> # <reason>
+# One entry per line. Lines starting with # are comments.
+#
+# A validator belongs here when it RAISES on bad input rather than
+# mutating in place, OR when its mutation is a constructor-time
+# canonicalization (e.g. constant defaults) that has no LLM-coercion
+# semantics. Adding entries triggers Layer C drift telemetry — the
+# guard emits ``post_llm_rule.kept rule_id=precommit_allowlist`` once
+# per pre-commit run with the current size, and the Layer C trigger
+# fires on ≥3 net additions in a 4-week window.
+
+scripts/agents/midday/models.py:RecommendationOverride._require_stop_when_cancelling_on_stop  # raises only, no mutation
+scripts/agents/midday/models.py:RecommendationOverride._normalize_revised_vnd_fields  # delegates to normalize_vnd_price which emits (SWI-184)
+scripts/agents/midday/models.py:AfternoonAction._normalize_evidence_price_vnd  # delegates to normalize_vnd_price which emits (SWI-184)
+scripts/agents/midday/models.py:AfternoonAction._require_evidence_when_reason_cites_price  # raises only, no mutation
+scripts/agents/longterm_review.py:NewStockRecommendation._normalize_suggested_entry_zone_vnd  # delegates to normalize_vnd_price which emits (SWI-184)
+scripts/shared/rules/catalyst_news.py:CatalystAddition.validate_phase_shape  # raises only, no mutation
+scripts/agents/retro/validate.py:_HOLD_ACTIONS  # static allowlist, not a validator
+scripts/agents/sector_models.py:TickerSignal._default_plan_shape_for_watch  # constructor-time canonicalization: WATCH/WAIT default plan_shape=NONE, no LLM coercion

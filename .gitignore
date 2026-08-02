@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+.coverage
+
+# Regenerated from live retro data by evals/scripts/seed_from_retro.py.
+# Committing it would publish real trading performance.
+evals/datasets/market_level/regression.yaml
+
+# Terraform
+infra/tfplan
+infra/.terraform/
+infra/training/.terraform/
+infra/training/terraform.tfvars
+infra/terraform.tfvars
+infra/backend.hcl
+*.tfstate
+*.tfstate.backup
+
+# Build artifacts
+.build_cli_package/
+*.run
+*.run.*
+
+# Web (TanStack Start + Cloudflare Workers)
+web/node_modules/
+web/dist/
+web/.wrangler/
+
+# Pipeline run artifacts — contain live portfolio positions and cash balances.
+# The DB is the source of truth; these are regenerated on every run. Never commit.
+research/
+
+# Local Claude Code state — machine-specific paths and personal session notes
+.claude/scheduled_tasks.lock
+.claude/projects/
+.claude/memory/
+
+# Linear seam — regenerated on every export_issues.py run (7-day fail-open cache)
+scripts/linear_migration/last_export.md
+scripts/linear_migration/processed_reports/
+
+.scrutinize/

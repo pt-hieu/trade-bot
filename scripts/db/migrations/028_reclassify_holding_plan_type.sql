@@ -1,0 +1,16 @@
+-- Migration 028: reclassify one holding from SWING to LONGTERM.
+--
+-- One-time data correction. Body omitted from the public repository because its
+-- literals described a real position.
+--
+-- What it did: a position opened as a swing trade was being held on a long-term
+-- thesis. This changed its plan_type so the position monitor stopped applying
+-- swing exit rules to it.
+--
+-- Note the defect it introduced: it changed portfolio_holdings without changing
+-- the matching rows in trades_calculated, so the sync trigger — which matched on
+-- ticker AND plan_type — stopped decrementing the position when its trades
+-- closed. Migration 135 fixed that at the trigger level by matching on ticker
+-- alone.
+--
+-- This file is a no-op and exists to keep migration numbering contiguous.

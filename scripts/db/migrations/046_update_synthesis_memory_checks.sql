@@ -1,0 +1,12 @@
+-- Migration 046: Update synthesis prompt MANDATORY MEMORY CHECKS
+-- Adds tool_get_learnings(query="winning_patterns") and (query="losing_patterns")
+-- as direct DB path alongside vector-based tools (which need embeddings to work)
+
+UPDATE agent_prompts
+SET system_prompt = REPLACE(
+    system_prompt,
+    E'## MANDATORY MEMORY CHECKS (Execute Before TOP PICKS)\n\nBefore generating TOP PICKS, you MUST call these tools and include results:\n\n1. CALL tool_get_learnings(query="summary")\n   → Get rolling win rate. If < 35%, note "LOW CONFIDENCE PERIOD" in output.\n\n2. CALL tool_get_similar_days(regime=X, hot_sectors=Y, macro=Z)\n   → Get similar day outcomes. Reference in MARKET MOOD section.\n\n3. CALL tool_get_losing_patterns(regime=X, cold_sectors=Y)\n   → Get patterns to avoid. Cross-check every TOP PICK against these.\n\nVALIDATION RULE: If a TOP PICK matches a losing pattern with >60% loss rate,\nyou MUST either (a) remove it from TOP PICKS, or (b) explicitly note the pattern risk.\n\nInclude in output:\n- MARKET MOOD: "Similar days: X% win rate (N samples)"\n- TOP PICKS: Note if stock matches winning/losing pattern',
+    E'## MANDATORY MEMORY CHECKS (Execute Before TOP PICKS)\n\nBefore generating TOP PICKS, you MUST call these tools and include results:\n\n1. CALL tool_get_learnings(query="summary")\n   → Get rolling win rate. If < 35%, note "LOW CONFIDENCE PERIOD" in output.\n\n2. CALL tool_get_learnings(query="winning_patterns")\n   → Get patterns that historically worked. Use to validate TOP PICK conviction.\n\n3. CALL tool_get_learnings(query="losing_patterns")\n   → Get patterns that historically failed. Cross-check every TOP PICK against these.\n\n4. CALL tool_get_similar_days(regime=X, hot_sectors=Y, macro=Z)\n   → Get similar day outcomes. Reference in MARKET MOOD section.\n\n5. CALL tool_get_losing_patterns(regime=X, cold_sectors=Y)\n   → Vector-search for patterns to avoid (supplements step 3 with semantic matching).\n\nVALIDATION RULE: If a TOP PICK matches a losing pattern with >60% loss rate,\nyou MUST either (a) remove it from TOP PICKS, or (b) explicitly note the pattern risk.\n\nInclude in output:\n- MARKET MOOD: "Similar days: X% win rate (N samples)"\n- TOP PICKS: Note if stock matches winning/losing pattern\n- Reference specific pattern names when relevant (e.g., "Matches losing pattern: HOLD on losing positions without stops")'
+),
+    updated_at = NOW()
+WHERE agent_key = 'synthesis';

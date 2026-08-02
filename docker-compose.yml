@@ -1,0 +1,23 @@
+services:
+  db:
+    image: docker.io/pgvector/pgvector:pg17
+    container_name: swingy-postgres
+    environment:
+      POSTGRES_USER: swingy
+      POSTGRES_PASSWORD: localdev
+      POSTGRES_DB: swingy
+    ports:
+      # Loopback-only: the DB is never meant to be reachable off this machine.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Mount schema for initial setup
+      - ./scripts/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swingy -d swingy"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

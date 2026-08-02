@@ -1,0 +1,42 @@
+{
+  "Triage": {
+    "id": "",
+    "type": "backlog"
+  },
+  "Monitoring": {
+    "id": "",
+    "type": "backlog"
+  },
+  "Deferred": {
+    "id": "",
+    "type": "unstarted"
+  },
+  "Escalated": {
+    "id": "",
+    "type": "unstarted"
+  },
+  "Resolved Candidate": {
+    "id": "",
+    "type": "unstarted"
+  },
+  "Confirm Regression": {
+    "id": "",
+    "type": "unstarted"
+  },
+  "Resolved": {
+    "id": "",
+    "type": "completed"
+  },
+  "Superseded": {
+    "id": "",
+    "type": "canceled"
+  },
+  "Duplicate": {
+    "id": "",
+    "type": "duplicate"
+  },
+  "In Progress": {
+    "id": "",
+    "type": "started"
+  }
+}

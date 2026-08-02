@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "swingy-web",
+  "compatibility_date": "2026-03-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "@tanstack/react-start/server-entry",
+  "observability": {
+    "enabled": true
+  },
+  "routes": [
+    { "pattern": "swingy.example.com", "custom_domain": true }
+  ],
+  "vars": {
+    "VNSTOCK_API_URL": "https://finance.example.com",
+    "VITE_VNSTOCK_API_URL": "https://finance.example.com"
+  }
+}

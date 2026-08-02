@@ -1,0 +1,75 @@
+name: Narrative Cluster Scan
+
+# SWI-74 Layer 3 regression watch. Weekly sweep over active narratives
+# looking for buckets that grew despite Layer 1 (intra-batch coalesce)
+# and Layer 2 (migration 337 same-sentiment merge). Output is a fenced
+# JSON block fed into scripts/process_review_findings.py so anything
+# surviving lands as a regression-watch finding on SWI-74.
+
+on:
+  schedule:
+    # Monday 07:00 UTC = 14:00 Vietnam, off-hour from linear_reconciler
+    # (02:30 UTC) so the two scripts don't compete for the same Neon
+    # connection or Linear rate-limit budget.
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Print findings without filing to Linear.'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: narrative-cluster-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    # Scheduled runs stay off in forks: they need secrets a fork will not have.
+    if: github.event_name != 'schedule' || github.repository == 'OWNER/trade-bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run cluster scan
+        id: scan
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SWINGY_ENV: production
+        run: |
+          uv run python scripts/maintenance/narrative_cluster_scan.py \
+            | tee narrative_cluster_scan_report.txt
+
+      - name: File findings to Linear
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          SWINGY_ENV: production
+        run: |
+          cat narrative_cluster_scan_report.txt \
+            | uv run python scripts/process_review_findings.py \
+                --parse-failure-issue SWI-74
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: narrative-cluster-scan-${{ github.run_id }}
+          path: narrative_cluster_scan_report.txt

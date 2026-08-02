@@ -1,0 +1,42 @@
+// Shared tool name → display label map used by message-list and agent-execution.
+// Keys present in both files use the more descriptive label from message-list.
+export const TOOL_LABELS: Record<string, string> = {
+  // Broker meta-tools
+  list_tools: "Discovering tools",
+  get_tool_schema: "Reading schema",
+  call_tool: "Direct call",
+  load_skill: "Loading skill",
+  // Leaf tools
+  get_portfolio: "Portfolio",
+  get_trades: "Trades",
+  get_watchlist: "Watchlist",
+  get_alerts: "Alerts",
+  get_market_context: "Market context",
+  get_prices: "Price history",
+  get_cash: "Cash",
+  get_goal: "Goal",
+  get_learnings: "Learnings",
+  get_technicals: "Technicals",
+  get_flow: "Foreign flow",
+  get_relative_strength: "Rel. strength",
+  get_catalysts: "Catalysts",
+  get_capital_events: "Corporate events",
+  get_insider: "Insider",
+  search_articles: "Articles",
+  read_article: "Article",
+  get_financials: "Financials",
+  get_company_research: "Research",
+  compute_trade_setup: "Trade setup",
+  get_similar_days: "Similar days",
+  get_trading_rules: "Trading rules",
+  get_winning_patterns: "Win patterns",
+  get_losing_patterns: "Loss patterns",
+  // agent-execution-only tools
+  get_morning_recommendations: "Morning brief",
+  get_position_alerts: "Position alerts",
+  get_midday_snapshot: "Midday",
+  get_daily_evaluations: "Evals",
+  get_daily_record: "Daily record",
+  get_calibration_insights: "Calibration",
+  get_strategy_directive: "Directive",
+}

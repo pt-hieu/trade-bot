@@ -1,0 +1,336 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Keep rev in sync with ruff version in uv.lock
+    rev: v0.14.14
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: async-sync-lint
+        name: Check _sync() calls in async functions
+        entry: uv run python scripts/lint_async_sync.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: no-negative-tool-instructions
+        name: No negative tool instructions in agent prompts
+        entry: uv run python scripts/hooks/check_no_negative_tool_instructions.py
+        language: system
+        files: ^scripts/agents/(configs|tools/broker)/.*\.(yaml|py)$
+        pass_filenames: true
+
+      - id: no-single-ticker-fetcher
+        name: Single-ticker fetchers must have a batch companion
+        entry: uv run python scripts/hooks/check_no_single_ticker_fetcher.py
+        language: system
+        files: ^scripts/(shared/api|agents/tools)/.*\.py$
+        pass_filenames: true
+
+      - id: check-provider-timeouts
+        name: _get_provider default must stay 60s (2026-04-14 silent-hang)
+        entry: uv run python scripts/hooks/check_provider_timeouts.py
+        language: system
+        files: ^scripts/agents/.*\.py$
+        pass_filenames: true
+
+      - id: check-provider-kwarg-passed
+        name: emit_silent_provider_hang_span must pass downstream_provider= (SWI-369)
+        entry: uv run python scripts/hooks/check_provider_kwarg_passed.py
+        language: system
+        files: ^(scripts|tests)/.*\.py$
+        pass_filenames: true
+
+      - id: check-outer-wall-helper
+        name: outer agent walls must use derived constants, not literals (SWI-306)
+        entry: uv run python scripts/hooks/check_outer_wall_helper.py
+        language: system
+        files: ^scripts/agents/.*\.py$
+        pass_filenames: true
+
+      - id: check-swallow-pattern
+        name: bare `except Exception` after wait_for must follow typed handler (SWI-306)
+        entry: uv run python scripts/hooks/check_swallow_pattern.py
+        language: system
+        files: ^scripts/(agents|pipeline)/.*\.py$
+        pass_filenames: true
+
+      - id: check-agent-run-guarded
+        name: agent.run must be wrapped in asyncio.wait_for
+        entry: uv run python scripts/hooks/check_agent_run_guarded.py
+        language: system
+        files: ^scripts/(agents|pipeline)/.*\.py$
+        pass_filenames: true
+
+      - id: check-rr-literals
+        name: No hardcoded R:R floor literals in agent prompts or briefs
+        entry: uv run python scripts/hooks/check_rr_literals.py
+        language: system
+        files: ^(scripts/agents/(configs/.*\.yaml|.*\.py)|research/.*/morning-brief\.md)$
+        pass_filenames: true
+
+      - id: check-structured-output-min-length
+        name: Agent output models default_factory=dict|list require min_length or allowlist
+        entry: uv run python scripts/hooks/check_structured_output_min_length.py
+        language: system
+        files: ^scripts/agents/.*\.py$
+        pass_filenames: true
+
+      - id: check-post-llm-emit
+        name: Mutating Pydantic validators must emit post_llm_rule (SWI-206)
+        entry: uv run python scripts/precommit/check_post_llm_emit.py
+        language: system
+        files: ^scripts/agents/.*\.py$
+        pass_filenames: true
+
+      - id: check-vnd-field-clamp
+        name: Pydantic *_vnd int/float fields must route through normalize_vnd_price (SWI-184)
+        entry: uv run python scripts/hooks/check_vnd_field_clamp.py
+        language: system
+        files: ^scripts/agents/.*\.py$
+        pass_filenames: true
+
+      - id: check-embed-tokens
+        name: No [EMBED:] placeholder tokens in yaml configs or briefs
+        entry: uv run python scripts/hooks/check_embed_tokens.py
+        language: system
+        files: ^(scripts/agents/configs/.*\.ya?ml|research/.*\.md)$
+        pass_filenames: true
+
+      - id: check-fragment-content-rules
+        name: No re-inlined TOOL RETRY GUARDRAIL in agent configs
+        entry: uv run python scripts/hooks/check_fragment_content_rules.py
+        language: system
+        files: ^scripts/agents/configs/.*\.ya?ml$
+        pass_filenames: true
+
+      - id: check-sector-yaml-guardrail-parity
+        name: tool-using sector_*.yaml must include shared retry-guardrail fragment
+        entry: uv run python scripts/hooks/check_sector_yaml_guardrail_parity.py
+        language: system
+        files: ^scripts/agents/configs/sector_.*\.ya?ml$
+        pass_filenames: true
+
+      - id: check-agent-yaml-composite-vs-atomic
+        name: Agent-yaml tool-surface contract (composite/atomic + batch exemplar + request_limit)
+        entry: uv run python scripts/hooks/check_agent_yaml_composite_vs_atomic.py
+        language: system
+        files: ^scripts/agents/configs/.*\.ya?ml$
+        pass_filenames: true
+
+      - id: check-agent-yaml-call-tools-args
+        name: Agent-yaml call_tools exemplar args must satisfy tool parameter schema (2026-04-29)
+        entry: uv run python scripts/hooks/check_agent_yaml_call_tools_args.py
+        language: system
+        files: ^scripts/agents/configs/.*\.ya?ml$
+        pass_filenames: true
+
+      - id: check-agent-yaml-injection-coherence
+        name: Pre-loaded claims must not contradict imperative tool directives (2026-04-24)
+        entry: uv run python scripts/hooks/check_agent_yaml_injection_coherence.py
+        language: system
+        files: ^scripts/agents/configs/.*\.ya?ml$
+        pass_filenames: true
+
+      - id: check-jsonb-write-parity
+        name: JSONB writes must cast via $N::jsonb when pre-serialized
+        entry: uv run python scripts/hooks/check_jsonb_write_parity.py
+        language: system
+        files: ^scripts/shared/neon/.*\.py$
+        pass_filenames: true
+
+      - id: check-broad-except-in-neon
+        name: shared/neon writers must use narrow_db_error or re-raise
+        entry: uv run python scripts/hooks/check_broad_except_in_neon.py
+        language: system
+        files: ^scripts/shared/neon/.*\.py$
+        pass_filenames: true
+
+      - id: check-no-silent-swallow
+        name: except Exception + print silent-swallow guard
+        entry: uv run python scripts/hooks/check_no_silent_swallow.py
+        language: system
+        # Scoped to pipeline/agents. Other paths under scripts/ have
+        # pre-existing swallows not yet migrated to report_caught.
+        files: ^scripts/(pipeline|agents)/.*\.py$
+        pass_filenames: true
+
+      - id: check-audit-tags-vocabulary
+        name: Audit provenance tags must be registered in shared/rules/audit_tags.py
+        entry: uv run python scripts/hooks/check_audit_tags_vocabulary.py
+        language: system
+        files: ^scripts/.*\.py$
+        pass_filenames: true
+
+      - id: check-schema-drift
+        name: Code column refs must match migrations/*.sql oracle (2026-04-21 cascade)
+        entry: uv run python scripts/hooks/check_schema_drift.py
+        language: system
+        files: ^scripts/(.*\.py|db/(migrations/.*\.sql|schema\.sql))$
+        pass_filenames: false
+
+      - id: check-rationale-citations
+        name: Rec rationale must cite only active catalysts/narratives (2026-04-21)
+        entry: uv run python scripts/hooks/check_rationale_citations.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-openrouter-model-construction
+        name: OpenRouterModel must only be constructed in scripts/agents/model/
+        entry: uv run python scripts/hooks/check_openrouter_model_construction.py
+        language: system
+        files: ^scripts/.*\.py$
+        pass_filenames: true
+
+      - id: check-raw-regime-reads
+        name: regime_raw is producer-only (2026-04-22 MON-2026-04-22-004)
+        entry: uv run python scripts/hooks/check_raw_regime_reads.py
+        language: system
+        files: ^scripts/.*\.py$
+        pass_filenames: true
+
+      - id: check-shared-rules-purity
+        name: shared/rules/ must stay LLM-free (CLAUDE.md Tier-1)
+        entry: uv run python scripts/hooks/check_shared_rules_purity.py
+        language: system
+        files: ^scripts/shared/rules/.*\.py$
+        pass_filenames: true
+
+      - id: check-no-async-in-scoring
+        name: SWI-171 — scoring.py must stay async/DB/LLM-free
+        entry: uv run python scripts/hooks/check_no_async_in_scoring.py
+        language: system
+        files: ^scripts/shared/rules/scoring\.py$
+        pass_filenames: true
+
+      - id: check-agent-config-literals
+        name: AgentConfig/UsageLimits/ModelSettings must not carry hardcoded int kwargs
+        entry: uv run python scripts/hooks/check_agent_config_literals.py
+        language: system
+        files: ^scripts/agents/.*\.py$
+        pass_filenames: true
+
+      - id: check-agent-yaml-model-parity
+        name: All agent configs must share one model_id
+        entry: uv run python scripts/hooks/check_agent_yaml_model_parity.py
+        language: system
+        files: ^scripts/agents/configs/.*\.ya?ml$
+        pass_filenames: false
+
+      - id: check-agent-yaml-max-tokens
+        name: All agent configs must pin max_tokens=96000 (CLAUDE.md)
+        entry: uv run python scripts/hooks/check_agent_yaml_max_tokens.py
+        language: system
+        files: ^scripts/agents/configs/.*\.ya?ml$
+        pass_filenames: false
+
+      - id: check-linear-taxonomy-parity
+        name: labels.json category/severity/dimension must match findings_schema enums
+        entry: uv run python scripts/linear_migration/check_taxonomy_parity.py
+        language: system
+        files: ^scripts/linear_migration/(labels\.json|findings_schema\.py)$
+        pass_filenames: false
+
+      - id: check-findings-bucket-parity
+        name: FindingsBlock buckets must be referenced by every subagent prompt
+        entry: uv run python -m pytest tests/unit/test_findings_schema.py -q
+        language: system
+        files: ^(scripts/linear_migration/findings_schema\.py|\.claude/skills/(pipeline-review/references/subagent-prompts\.md|audit/instructions\.md)|tests/unit/test_findings_schema\.py)$
+        pass_filenames: false
+
+      - id: check-commit-subject-swi
+        name: commit subject must reference SWI-NN or be allow-listed (warn-only soft-launch)
+        entry: uv run python scripts/git_hooks/check_commit_subject_swi.py
+        language: system
+        stages: [commit-msg]
+        pass_filenames: true
+
+      - id: check-max-file-lines
+        name: Python files capped at 350 lines (baselined)
+        entry: uv run python scripts/hooks/check_max_file_lines.py
+        language: system
+        files: ^scripts/.*\.py$
+        pass_filenames: false
+
+      - id: check-no-any-type
+        name: typing.Any must not grow (baselined)
+        entry: uv run python scripts/hooks/check_no_any_type.py
+        language: system
+        files: ^scripts/.*\.py$
+        pass_filenames: false
+
+      - id: check-none-safe-get
+        name: dict.get(key, default) must not grow in DB-adjacent scope (baselined)
+        entry: uv run python scripts/hooks/check_none_safe_get.py
+        language: system
+        files: ^scripts/(agents/tools|shared/(neon|api))/.*\.py$
+        pass_filenames: false
+
+      - id: check-baseline-monotone
+        name: Baselines must not silently inflate
+        entry: uv run python scripts/hooks/check_baseline_monotone.py
+        language: system
+        files: ^scripts/hooks/data/.*_baseline\.txt$
+        pass_filenames: true
+
+      - id: check-pyright
+        name: pyright (pre-push, not pre-commit)
+        entry: uv run python scripts/hooks/check_pyright.py
+        language: system
+        stages: [pre-push, manual]
+        pass_filenames: false
+        always_run: true
+
+      - id: check-risk-reward-readers
+        name: risk_reward direct-read coercion guard (4th-instance recurrence — see SWI-115/317/340)
+        entry: uv run python scripts/hooks/check_risk_reward_readers.py
+        language: system
+        stages: [pre-push, manual]
+        pass_filenames: false
+        always_run: true
+
+      - id: check-orchestrator-imports
+        name: Orchestrator entry-point modules must import cleanly (SWI-175 guard)
+        entry: uv run python scripts/hooks/check_orchestrator_imports.py
+        language: system
+        files: ^scripts/(agents|pipeline|analysis)/.*\.py$
+        pass_filenames: false
+
+      - id: check-neon-sql-concat
+        name: SWI-A — implicit string concat must not build Neon SQL (use $N bind)
+        entry: uv run python scripts/hooks/check_neon_sql_concat.py
+        language: system
+        files: ^scripts/shared/neon/.*\.py$
+        pass_filenames: true
+
+      - id: check-pipeline-db-write-swallow
+        name: pipeline / db / agents-persist `except Exception` must raise or narrow (SWI-NN)
+        entry: uv run python scripts/hooks/check_pipeline_db_write_swallow.py
+        language: system
+        files: ^scripts/(pipeline|db|agents/.*persist)/.*\.py$
+        pass_filenames: true
+
+      - id: check-migration-invariant-mirror
+        name: New CHECK constraints require a Python mirror touch (audit mode for first week — SWI-NN)
+        entry: uv run python scripts/hooks/check_migration_invariant_mirror.py --audit
+        language: system
+        files: ^scripts/(db/migrations/.*\.sql|shared/rules/row_invariants/.*\.py)$
+        pass_filenames: true
+
+      - id: check-neon-private-import
+        name: No `shared.neon.insert_records._common` imports outside neon/ + tests/ (SWI-NN)
+        entry: uv run python scripts/hooks/check_neon_private_import.py
+        language: system
+        files: ^scripts/.*\.py$
+        pass_filenames: true
+
+      - id: check-news-v2-pipeline-version-filter
+        name: News v2 read-path chokepoint (FROM narratives|catalysts only via sanctioned helpers)
+        entry: uv run python scripts/hooks/check_news_v2_pipeline_version_filter.py
+        language: system
+        files: ^(scripts/.*\.py|web/src/.*\.(ts|tsx))$
+        pass_filenames: true

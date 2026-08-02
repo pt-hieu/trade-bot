@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars and fill in your values
+ssh_public_key = "ssh-ed25519 AAAA... your-email@example.com"
+
+# Required, no default: the address you will SSH from.
+ssh_allowed_cidrs = ["203.0.113.4/32"]
+
+# Cloudflare — get from dashboard (example.com zone)
+cloudflare_api_token = "your-cloudflare-api-token"
+cloudflare_zone_id   = "your-cloudflare-zone-id"

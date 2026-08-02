@@ -1,0 +1,62 @@
+name: Linear Reconciler
+
+# Time-axis sweep over the Linear team Swingy. See scripts/linear_reconciler.py
+# for the four rules. Runs after the morning scan settles so any same-day
+# `bumps[]` / `regressions[]` writes from the pipeline-review have already
+# landed. Sentinel keeps it idempotent within a UTC calendar day.
+
+on:
+  schedule:
+    # 02:30 UTC = 9:30 AM Vietnam — comfortably after the 22:00 UTC daily
+    # scan + 00:30 UTC pipeline-review window. Off-the-hour to avoid the
+    # GitHub-Actions stampede on minute 0.
+    - cron: '23 2 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Evaluate rules and print proposals without writing.'
+        required: false
+        type: boolean
+        default: false
+      force:
+        description: 'Re-run even when today''s sentinel exists.'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    # Scheduled runs stay off in forks: they need secrets a fork will not have.
+    if: github.event_name != 'schedule' || github.repository == 'OWNER/trade-bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Need history for the `git log --grep=SWI-NN` rule signal and
+          # for verifying closing-commit shas in resolved-candidate comments.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run reconciler
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          SWINGY_ENV: production
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
+          FORCE: ${{ github.event.inputs.force == 'true' && '--force' || '' }}
+        run: uv run python scripts/linear_reconciler.py $DRY_RUN $FORCE
