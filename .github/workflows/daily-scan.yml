@@ -146,7 +146,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           SWINGY_TOOL_STRICT: "1"
           ADVOCATE_GATE_MODE: enforce
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           max_attempts: 1
           timeout_minutes: 50
