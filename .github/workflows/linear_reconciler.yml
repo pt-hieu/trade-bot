@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Need history for the `git log --grep=SWI-NN` rule signal and
           # for verifying closing-commit shas in resolved-candidate comments.
