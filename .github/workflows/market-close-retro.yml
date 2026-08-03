@@ -64,7 +64,7 @@ jobs:
 
       - name: Cache HuggingFace models
         if: steps.market_check.outputs.trading == 'true' || github.event_name == 'workflow_dispatch'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/huggingface
           key: huggingface-${{ runner.os }}-minilm-v1
