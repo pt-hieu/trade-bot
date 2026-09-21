@@ -1,5 +1,5 @@
 fastapi>=0.109.0
 uvicorn>=0.27.0
-pandas>=2.0.0
+pandas>=3.0.6
 yfinance>=0.2.0
 # vnstock_data and vnstock_news installed via premium installer
